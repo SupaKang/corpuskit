@@ -24,6 +24,18 @@ def installed(py):
         return None
 
 
+def proxy_ready(py):
+    if not py:
+        return False
+    try:
+        r = subprocess.run(
+            [py, "-c", "import fastapi, uvicorn"],
+            capture_output=True, text=True, timeout=25)
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
 def proxy_exe(py):
     if not py:
         return None

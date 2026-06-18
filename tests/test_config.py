@@ -1,4 +1,5 @@
 """Config tests — defaults, deep-merge, dotted get, path resolution."""
+import os
 import sys
 from pathlib import Path
 
@@ -35,3 +36,34 @@ def test_user_override(tmp_path):
     # untouched default still present
     assert cfg.get("knowledge.search.body_cap") == 6000
     assert cfg.corpus_root == tmp_path.resolve()
+
+
+def test_load_accepts_windows_backslash_config_path_argument(tmp_path):
+    cfg_file = tmp_path / "corpus.yaml"
+    cfg_file.write_text("locale: ko\n", encoding="utf-8")
+    win_style = str(cfg_file)
+
+    cfg = Config.load(win_style)
+
+    assert cfg.config_path == cfg_file.resolve()
+
+
+def test_load_accepts_windows_backslash_config_path_from_env(tmp_path, monkeypatch):
+    cfg_file = tmp_path / "corpus.yaml"
+    cfg_file.write_text("locale: ko\n", encoding="utf-8")
+    monkeypatch.setenv("CORPUSKIT_CONFIG", str(cfg_file))
+
+    cfg = Config.load(os.environ["CORPUSKIT_CONFIG"])
+
+    assert cfg.config_path == cfg_file.resolve()
+
+
+def test_load_rejects_probably_collapsed_windows_path():
+    bad = "D:ProjectsinfraOVERMINDcorpus.yaml"
+
+    try:
+        Config.load(bad)
+    except ValueError as exc:
+        assert "Windows path appears to have lost separators" in str(exc)
+    else:
+        raise AssertionError("collapsed Windows path should be rejected")

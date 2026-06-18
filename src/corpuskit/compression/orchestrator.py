@@ -3,6 +3,7 @@
 import json
 import os
 import subprocess
+import time
 
 from ..core import platform as plat
 from . import compat, headroom, rtk
@@ -24,6 +25,7 @@ class Orchestrator:
             "rtk_bin": rtk.discover(self.cfg),
             "headroom_python": py,
             "headroom_version": headroom.installed(py),
+            "headroom_proxy_ready": headroom.proxy_ready(py),
             "headroom_exe": headroom.proxy_exe(py),
         }
 
@@ -68,16 +70,16 @@ class Orchestrator:
     def install(self):
         d = self.discover()
         steps = []
-        if not d["headroom_version"]:
+        if not d["headroom_version"] or not d["headroom_proxy_ready"]:
             py = headroom.python_bin(self.cfg)
             ver = self.cfg.get("compression.headroom.version", "~=0.26")
             try:
-                subprocess.run([py, "-m", "pip", "install", f"headroom-ai{ver}"], check=True, timeout=900)
-                steps.append("installed headroom-ai")
+                subprocess.run([py, "-m", "pip", "install", f"headroom-ai[proxy]{ver}"], check=True, timeout=900)
+                steps.append("installed headroom-ai[proxy]")
             except Exception as e:
-                steps.append(f"headroom install failed: {e}; pip install headroom-ai{ver} manually")
+                steps.append(f"headroom install failed: {e}; pip install headroom-ai[proxy]{ver} manually")
         else:
-            steps.append(f"headroom {d['headroom_version']} present")
+            steps.append(f"headroom {d['headroom_version']} present with proxy dependencies")
         if not d["rtk_bin"]:
             steps.append("RTK missing — " + rtk.install_hint(self.cfg))
         else:
@@ -89,20 +91,36 @@ class Orchestrator:
         exe = d["headroom_exe"]
         if not (exe or d["headroom_version"]):
             return {"ok": False, "error": "Headroom not installed; run `corpus compression install`."}
+        if not d["headroom_proxy_ready"]:
+            return {"ok": False, "error": "Headroom proxy dependencies missing; run `corpus compression install`."}
         port = self.cfg.get("compression.headroom.port") or 0
         if not port:
             port = plat.free_port()
+        env_name = self.cfg.get("compression.headroom.base_url_env", "ANTHROPIC_BASE_URL")
+        base = f"http://127.0.0.1:{port}"
+        if headroom.port_open(port):
+            st = {"pid": None, "port": port, "base_url": base, "env": env_name}
+            self.state_path.parent.mkdir(parents=True, exist_ok=True)
+            self.state_path.write_text(json.dumps(st, indent=2), encoding="utf-8")
+            return {"ok": True, **st, "reused": True}
         cmd = [exe, "proxy", "--port", str(port)] if exe else \
               [headroom.python_bin(self.cfg), "-m", "headroom", "proxy", "--port", str(port)]
         try:
             proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception as e:
             return {"ok": False, "error": f"failed to launch proxy: {e}"}
-        env_name = self.cfg.get("compression.headroom.base_url_env", "ANTHROPIC_BASE_URL")
-        base = f"http://127.0.0.1:{port}"
         st = {"pid": proc.pid, "port": port, "base_url": base, "env": env_name}
         self.state_path.parent.mkdir(parents=True, exist_ok=True)
         self.state_path.write_text(json.dumps(st, indent=2), encoding="utf-8")
+        deadline = time.time() + 30
+        while time.time() < deadline:
+            if headroom.port_open(port):
+                break
+            if proc.poll() is not None:
+                return {"ok": False, **st, "error": f"Headroom proxy exited with code {proc.returncode}"}
+            time.sleep(0.5)
+        else:
+            return {"ok": False, **st, "error": f"Headroom proxy did not listen on port {port} within 30s"}
         return {"ok": True, **st, "hint": f"set {env_name}={base} for your agent (the adapter can export it)"}
 
     def stop(self):

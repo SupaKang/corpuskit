@@ -1,18 +1,29 @@
 """Idempotent settings.json editor — backup + check-before-update, parameterized
 target file/key. Extracted from OVERMIND's register_*.py; shared by agent adapters."""
 import json
+import shlex
 import shutil
 from pathlib import Path
 
 
 def _load(path):
     p = Path(path)
-    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    return json.loads(p.read_text(encoding="utf-8-sig")) if p.exists() else {}
 
 
 def _save(path, data):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _same_command(left, right):
+    def norm(value):
+        try:
+            parts = shlex.split(str(value or ""), posix=False)
+        except ValueError:
+            parts = str(value or "").split()
+        return [p.strip('"').replace("\\", "/") for p in parts]
+    return norm(left) == norm(right)
 
 
 def backup(path):
@@ -37,13 +48,18 @@ def ensure_mcp_server(path, name, command, args, env=None):
 def ensure_hook(path, event, command, matcher=""):
     d = _load(path)
     arr = d.setdefault("hooks", {}).setdefault(event, [])
-    exists = any(
-        h.get("command") == command
-        for blk in arr if isinstance(blk, dict)
-        for h in blk.get("hooks", [])
-    )
-    if exists:
-        return False
+    changed = False
+    for blk in arr:
+        if not isinstance(blk, dict):
+            continue
+        for h in blk.get("hooks", []):
+            if _same_command(h.get("command"), command):
+                if h.get("command") != command:
+                    h["command"] = command
+                    changed = True
+                if changed:
+                    _save(path, d)
+                return changed
     arr.append({"matcher": matcher, "hooks": [{"type": "command", "command": command}]})
     _save(path, d)
     return True
@@ -65,7 +81,7 @@ def remove_hook(path, event, command):
     for blk in arr:
         if isinstance(blk, dict):
             hooks = blk.get("hooks", [])
-            kept = [h for h in hooks if h.get("command") != command]
+            kept = [h for h in hooks if not _same_command(h.get("command"), command)]
             if len(kept) != len(hooks):
                 changed = True
             blk["hooks"] = kept

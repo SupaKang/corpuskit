@@ -12,6 +12,10 @@ def _q(s):
     return f'"{s}"' if (" " in s) else s
 
 
+def _shell_path(s):
+    return Path(str(s)).as_posix()
+
+
 class ClaudeCodeAdapter(BaseAdapter):
     name = "claude-code"
     EVENT_MAP = {
@@ -29,16 +33,16 @@ class ClaudeCodeAdapter(BaseAdapter):
         self.server_name = cfg.get("knowledge.mcp.server_name", "knowledge-runtime")
 
     def _hook_cmd(self, subcmd):
-        parts = [self.py, "-m", "corpuskit.cli"]
+        parts = [_shell_path(self.py), "-m", "corpuskit.cli"]
         if self.config_arg:
-            parts += ["--config", self.config_arg]
+            parts += ["--config", _shell_path(self.config_arg)]
         parts.append(subcmd)
         return " ".join(_q(p) for p in parts)
 
     def _mcp_args(self):
         args = ["-m", "corpuskit.cli"]
         if self.config_arg:
-            args += ["--config", self.config_arg]
+            args += ["--config", _shell_path(self.config_arg)]
         args.append("serve-mcp")
         return args
 

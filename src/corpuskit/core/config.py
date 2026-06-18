@@ -1,6 +1,7 @@
 """Config loading: deep-merge user corpus.yaml over baked-in DEFAULTS.
 Path resolution is relative to the config file's dir (or cwd for zero-config)."""
 import copy
+import re
 from pathlib import Path
 
 from .defaults import DEFAULTS
@@ -31,6 +32,16 @@ def find_config(start=None):
     return None
 
 
+def _path_arg(path):
+    raw = str(path)
+    if re.match(r"^[A-Za-z]:[^\\/]", raw):
+        raise ValueError(
+            "Windows path appears to have lost separators; use an escaped path, "
+            "single-quoted YAML string, or forward slashes"
+        )
+    return Path(raw)
+
+
 class Config:
     def __init__(self, data, config_path=None):
         self.data = data
@@ -46,10 +57,10 @@ class Config:
             path = find_config()
         over = {}
         if path:
-            path = Path(path)
+            path = _path_arg(path)
             if yaml is None:
                 raise RuntimeError("PyYAML required to read config — pip install pyyaml")
-            over = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+            over = yaml.safe_load(path.read_text(encoding="utf-8-sig")) or {}
         merged = _deep_merge(DEFAULTS, over)
         return cls(merged, config_path=path)
 
