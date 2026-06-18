@@ -1,0 +1,54 @@
+# Example: a fully localized (Korean) corpuskit instance with a keyed layout.
+# Shows non-English frontmatter fields, custom project keys, MCP localization,
+# and compression — without any machine-specific paths (set corpus_root: "." at the root).
+version: 1
+locale: ko
+
+knowledge:
+  corpus_root: "."
+  keyed_roots:
+    specs: spec
+    decisions: decision
+    devlogs: devlog
+  flat_roots:
+    daily: daily
+  auto_layout: false
+
+  project_keys:
+    canon: [PROJ_A, PROJ_B, INFRA]
+    alias: { proj-a: PROJ_A }
+    exclude: [_archive, tmp]
+    skip_subdirs: [backup]
+    key_from_dirname: false
+
+  frontmatter:
+    style: bulleted              # `- 프로젝트: X` style; use `yaml` for `--- ... ---` blocks
+    fields:
+      project: ["프로젝트", "project"]
+      date: ["작성일", "date"]
+      status: ["상태", "status"]
+
+  status_map:
+    CONFIRMED: ["확정", "confirmed"]
+    REVIEW: ["검토중", "review"]
+    DONE: ["완료", "done"]
+    DRAFT: ["초안", "draft"]
+    SUPERSEDED: ["폐기", "supersede"]
+
+  constraints: { decisions_root: decisions }
+
+  mcp:
+    server_name: knowledge-runtime
+    tools:
+      search: { name: kr_search, description: "지식 코퍼스 검색 (FTS5/BM25)." }
+      constraints: { name: kr_constraints, description: "ADR @constraint 제약 조회." }
+
+agent:
+  type: claude-code
+  # python: ""          # "" → auto-discover the interpreter
+
+compression:
+  enabled: true
+  order: [rtk, headroom]
+  headroom: { port: 8787 }
+  native_windows: degrade

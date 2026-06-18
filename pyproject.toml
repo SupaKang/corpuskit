@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "corpuskit"
+version = "0.1.0"
+description = "Config-driven knowledge corpus runtime (FTS5 search + MCP + machine-readable constraints) and compression orchestration for AI coding agents."
+readme = "README.md"
+requires-python = ">=3.9,<3.14"
+license = { text = "Apache-2.0" }
+authors = [{ name = "SupaKang" }]
+keywords = ["knowledge-base", "rag", "mcp", "fts5", "ai-agents", "claude-code"]
+dependencies = ["PyYAML>=6"]
+
+[project.optional-dependencies]
+mcp = ["mcp>=1.0"]
+memory = ["headroom-ai>=0.26,<1.0"]   # heavy vector tier (gated)
+compression = []                        # shells out to external RTK/Headroom; no python weight
+all = ["mcp>=1.0"]
+
+[project.scripts]
+corpus = "corpuskit.cli.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+corpuskit = ["templates/*.md", "i18n/*.yaml"]
