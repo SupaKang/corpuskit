@@ -10,8 +10,27 @@ readme = "README.md"
 requires-python = ">=3.9,<3.14"
 license = { text = "Apache-2.0" }
 authors = [{ name = "SupaKang" }]
-keywords = ["knowledge-base", "rag", "mcp", "fts5", "ai-agents", "claude-code"]
+keywords = ["knowledge-base", "rag", "mcp", "fts5", "ai-agents", "claude-code", "cursor"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Documentation",
+  "Topic :: Text Processing :: Indexing",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+]
 dependencies = ["PyYAML>=6"]
+
+[project.urls]
+Homepage = "https://github.com/SupaKang/corpuskit"
+Repository = "https://github.com/SupaKang/corpuskit"
+Issues = "https://github.com/SupaKang/corpuskit/issues"
 
 [project.optional-dependencies]
 mcp = ["mcp>=1.0"]

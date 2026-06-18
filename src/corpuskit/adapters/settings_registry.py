@@ -61,14 +61,23 @@ def remove_hook(path, event, command):
     d = _load(path)
     arr = d.get("hooks", {}).get(event, [])
     changed = False
+    new_arr = []
     for blk in arr:
         if isinstance(blk, dict):
             hooks = blk.get("hooks", [])
-            new = [h for h in hooks if h.get("command") != command]
-            if len(new) != len(hooks):
-                blk["hooks"] = new
+            kept = [h for h in hooks if h.get("command") != command]
+            if len(kept) != len(hooks):
                 changed = True
+            blk["hooks"] = kept
+            if kept:
+                new_arr.append(blk)      # drop now-empty blocks
+        else:
+            new_arr.append(blk)
     if changed:
+        if new_arr:
+            d["hooks"][event] = new_arr
+        else:
+            d["hooks"].pop(event, None)  # drop now-empty event
         _save(path, d)
     return changed
 

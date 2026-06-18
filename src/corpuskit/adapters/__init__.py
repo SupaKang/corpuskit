@@ -23,8 +23,10 @@ def get_adapter(cfg):
         return ClaudeCodeAdapter(cfg)
     if t == "standalone":
         return StandaloneAdapter(cfg)
-    if t in ("cursor", "cline"):
-        raise NotImplementedError(
-            f"adapter '{t}' is a stub. Use agent.type: standalone for now, or contribute "
-            f"a {t} adapter (map logical events session_end/user_prompt_submit to {t}'s hook API).")
+    if t == "cursor":
+        from .mcp_json import CursorAdapter
+        return CursorAdapter(cfg)
+    if t in ("cline", "mcp-json"):
+        from .mcp_json import McpJsonAdapter
+        return McpJsonAdapter(cfg)
     raise ValueError(f"unknown agent.type: {t}")

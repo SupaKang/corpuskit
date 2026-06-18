@@ -35,7 +35,7 @@ knowledge:
   flat_roots:  { daily: daily }
   frontmatter: { style: auto, fields: { project: [project], status: [status] } }
   constraints: { decisions_root: decisions }
-agent: { type: claude-code }       # claude-code | standalone | (cursor/cline stubs)
+agent: { type: claude-code }       # claude-code (MCP+hooks) | cursor (MCP) | standalone | cline/mcp-json
 compression: { enabled: false }
 ```
 `corpus init` scaffolds one. See `examples/overmind.yaml` for a full localized (Korean) instance.
